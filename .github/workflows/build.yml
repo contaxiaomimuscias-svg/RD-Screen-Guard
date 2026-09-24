@@ -1,0 +1,44 @@
+name: Compilar RD Screen Guard
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+
+      - name: Baixar código
+        uses: actions/checkout@v4
+
+      - name: Instalar .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Compilar programa
+        run: |
+          dotnet publish RD.ScreenGuard.csproj `
+            -c Release `
+            -r win-x64 `
+            --self-contained true `
+            -p:PublishSingleFile=true `
+            -p:IncludeNativeLibrariesForSelfExtract=true `
+            -o publish
+
+      - name: Criar ZIP
+        shell: pwsh
+        run: |
+          Compress-Archive `
+            -Path publish\* `
+            -DestinationPath RD-Screen-Guard-Windows.zip
+
+      - name: Enviar EXE como artefato
+        uses: actions/upload-artifact@v4
+        with:
+          name: RD-Screen-Guard-Windows
+          path: RD-Screen-Guard-Windows.zip
