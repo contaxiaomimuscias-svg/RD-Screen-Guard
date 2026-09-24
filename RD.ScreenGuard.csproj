@@ -10,5 +10,7 @@
     <RootNamespace>RD.ScreenGuard</RootNamespace>
 
     <ApplicationManifest>app.manifest</ApplicationManifest>
+
+    <ApplicationIcon>RD-Screen-Guard.ico</ApplicationIcon>
   </PropertyGroup>
 </Project>
