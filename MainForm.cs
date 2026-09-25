@@ -129,7 +129,6 @@ namespace RD.ScreenGuard
                             18,
                             24,
                             18),
-
                     ColumnCount = 2,
                     RowCount = 2
                 };
@@ -170,7 +169,8 @@ namespace RD.ScreenGuard
                 0,
                 0);
 
-            CriarComputadores(computadores);
+            CriarComputadores(
+                computadores);
 
             // =====================================================
             // AÇÃO
@@ -186,7 +186,8 @@ namespace RD.ScreenGuard
                 1,
                 0);
 
-            CriarAcao(acao);
+            CriarAcao(
+                acao);
 
             // =====================================================
             // CONTROLE
@@ -206,7 +207,97 @@ namespace RD.ScreenGuard
                 controle,
                 2);
 
-            CriarControle(controle);
+            CriarControle(
+                controle);
+        }
+
+        // =========================================================
+        // CARD PRINCIPAL
+        // =========================================================
+
+        private Panel CriarCard(
+            string titulo,
+            string descricao)
+        {
+            Panel panel =
+                new Panel
+                {
+                    Dock = DockStyle.Fill,
+                    BackColor = Card,
+                    Margin = new Padding(0),
+                    Padding = new Padding(0)
+                };
+
+            panel.Paint +=
+                (s, e) =>
+                {
+                    using Pen pen =
+                        new Pen(Border);
+
+                    e.Graphics.DrawRectangle(
+                        pen,
+                        0,
+                        0,
+                        panel.Width - 1,
+                        panel.Height - 1);
+                };
+
+            Label title =
+                new Label
+                {
+                    Text = titulo,
+
+                    ForeColor =
+                        Color.FromArgb(
+                            95,
+                            185,
+                            255),
+
+                    Font =
+                        new Font(
+                            "Segoe UI",
+                            11F,
+                            FontStyle.Bold),
+
+                    AutoSize = true,
+
+                    Location =
+                        new Point(
+                            18,
+                            16)
+                };
+
+            panel.Controls.Add(
+                title);
+
+            Label description =
+                new Label
+                {
+                    Text = descricao,
+
+                    ForeColor =
+                        Color.FromArgb(
+                            120,
+                            135,
+                            150),
+
+                    Font =
+                        new Font(
+                            "Segoe UI",
+                            8F),
+
+                    AutoSize = true,
+
+                    Location =
+                        new Point(
+                            18,
+                            40)
+                };
+
+            panel.Controls.Add(
+                description);
+
+            return panel;
         }
 
         // =========================================================
@@ -230,6 +321,7 @@ namespace RD.ScreenGuard
                 {
                     Text = "RD",
                     ForeColor = Blue,
+
                     Font =
                         new Font(
                             "Segoe UI",
@@ -244,13 +336,16 @@ namespace RD.ScreenGuard
                             20)
                 };
 
-            header.Controls.Add(logo);
+            header.Controls.Add(
+                logo);
 
             Label title =
                 new Label
                 {
                     Text = "SCREEN GUARD",
-                    ForeColor = Color.White,
+
+                    ForeColor =
+                        Color.White,
 
                     Font =
                         new Font(
@@ -266,7 +361,8 @@ namespace RD.ScreenGuard
                             19)
                 };
 
-            header.Controls.Add(title);
+            header.Controls.Add(
+                title);
 
             Label subtitle =
                 new Label
@@ -294,7 +390,8 @@ namespace RD.ScreenGuard
                             61)
                 };
 
-            header.Controls.Add(subtitle);
+            header.Controls.Add(
+                subtitle);
 
             Panel status =
                 new Panel
@@ -320,7 +417,8 @@ namespace RD.ScreenGuard
                             27)
                 };
 
-            header.Controls.Add(status);
+            header.Controls.Add(
+                status);
 
             lblStatus =
                 new Label
@@ -401,9 +499,12 @@ namespace RD.ScreenGuard
                     SizeType.Absolute,
                     25));
 
-            container.Controls.Add(tabela);
+            container.Controls.Add(
+                tabela);
 
-            // PC 01
+            // =====================================================
+            // COMPUTADOR 01
+            // =====================================================
 
             cardPc1 =
                 CriarCardComputador();
@@ -439,7 +540,8 @@ namespace RD.ScreenGuard
                     42);
 
             Label icon1 =
-                CriarIcone("01");
+                CriarIcone(
+                    "01");
 
             cardPc1.Controls.Add(
                 icon1);
@@ -453,7 +555,9 @@ namespace RD.ScreenGuard
                     cardPc1.Width - 52,
                     23);
 
-            // PC 02
+            // =====================================================
+            // COMPUTADOR 02
+            // =====================================================
 
             cardPc2 =
                 CriarCardComputador();
@@ -489,7 +593,8 @@ namespace RD.ScreenGuard
                     42);
 
             Label icon2 =
-                CriarIcone("02");
+                CriarIcone(
+                    "02");
 
             cardPc2.Controls.Add(
                 icon2);
@@ -503,7 +608,9 @@ namespace RD.ScreenGuard
                     cardPc2.Width - 52,
                     23);
 
-            // Empresa
+            // =====================================================
+            // EMPRESA
+            // =====================================================
 
             lblEmpresa =
                 new Label
@@ -526,7 +633,9 @@ namespace RD.ScreenGuard
                 0,
                 2);
 
+            // =====================================================
             // ID
+            // =====================================================
 
             lblDevice =
                 new Label
@@ -549,7 +658,9 @@ namespace RD.ScreenGuard
                 0,
                 3);
 
-            // Eventos
+            // =====================================================
+            // SELEÇÃO PC 01
+            // =====================================================
 
             pc1.CheckedChanged +=
                 (s, e) =>
@@ -565,6 +676,10 @@ namespace RD.ScreenGuard
                     RemoverDestaque(
                         cardPc2);
                 };
+
+            // =====================================================
+            // SELEÇÃO PC 02
+            // =====================================================
 
             pc2.CheckedChanged +=
                 (s, e) =>
@@ -606,8 +721,7 @@ namespace RD.ScreenGuard
                 (s, e) =>
                 {
                     using Pen pen =
-                        new Pen(
-                            Border);
+                        new Pen(Border);
 
                     e.Graphics.DrawRectangle(
                         pen,
@@ -697,7 +811,7 @@ namespace RD.ScreenGuard
                     Padding =
                         new Padding(
                             18,
-                            62,
+                            65,
                             18,
                             15)
                 };
@@ -752,8 +866,11 @@ namespace RD.ScreenGuard
             rbBlack =
                 new RadioButton
                 {
-                    Text = "TELA PRETA",
-                    ForeColor = Color.White,
+                    Text =
+                        "TELA PRETA",
+
+                    ForeColor =
+                        Color.White,
 
                     Font =
                         new Font(
@@ -791,7 +908,8 @@ namespace RD.ScreenGuard
             rbImage =
                 new RadioButton
                 {
-                    Text = "IMAGEM",
+                    Text =
+                        "IMAGEM",
 
                     ForeColor =
                         Color.White,
@@ -830,7 +948,8 @@ namespace RD.ScreenGuard
             rbText =
                 new RadioButton
                 {
-                    Text = "MENSAGEM",
+                    Text =
+                        "MENSAGEM",
 
                     ForeColor =
                         Color.White,
@@ -952,7 +1071,8 @@ namespace RD.ScreenGuard
             btnImage.Dock =
                 DockStyle.Top;
 
-            btnImage.Height = 40;
+            btnImage.Height =
+                40;
 
             btnImage.Margin =
                 new Padding(
@@ -1005,35 +1125,12 @@ namespace RD.ScreenGuard
                         Color.FromArgb(
                             11,
                             19,
-                            29)
+                            29),
+
+                    Padding =
+                        new Padding(
+                            5)
                 };
-
-            Label desc =
-                new Label
-                {
-                    Text = descricao,
-
-                    ForeColor =
-                        Color.FromArgb(
-                            120,
-                            135,
-                            150),
-
-                    Font =
-                        new Font(
-                            "Segoe UI",
-                            7.5F),
-
-                    AutoSize = true,
-
-                    Location =
-                        new Point(
-                            28,
-                            25)
-                };
-
-            panel.Controls.Add(
-                desc);
 
             return panel;
         }
@@ -1125,7 +1222,7 @@ namespace RD.ScreenGuard
         }
 
         // =========================================================
-        // BOTÃO
+        // BOTÕES
         // =========================================================
 
         private Button CriarBotao(
@@ -1235,7 +1332,7 @@ namespace RD.ScreenGuard
         }
 
         // =========================================================
-        // ALVO
+        // COMPUTADOR ALVO
         // =========================================================
 
         private string? ObterAlvo()
@@ -1250,7 +1347,7 @@ namespace RD.ScreenGuard
         }
 
         // =========================================================
-        // EXECUTAR
+        // EXECUTAR AÇÃO
         // =========================================================
 
         private async Task ExecutarAsync()
@@ -1281,7 +1378,8 @@ namespace RD.ScreenGuard
             }
             else if (rbImage.Checked)
             {
-                if (!File.Exists(imageFile))
+                if (!File.Exists(
+                    imageFile))
                 {
                     MessageBox.Show(
                         "Selecione uma imagem primeiro.",
@@ -1323,6 +1421,7 @@ namespace RD.ScreenGuard
 
             try
             {
+                // Computador local
                 if (target == deviceId)
                 {
                     AplicarComando(
@@ -1333,6 +1432,7 @@ namespace RD.ScreenGuard
                     return;
                 }
 
+                // Computador remoto
                 if (string.IsNullOrWhiteSpace(
                     auth.AccessToken))
                 {
@@ -1382,7 +1482,9 @@ namespace RD.ScreenGuard
             {
                 MessageBox.Show(
                     "Selecione um computador.",
-                    "RD Screen Guard");
+                    "RD Screen Guard",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information);
 
                 return;
             }
@@ -1442,7 +1544,7 @@ namespace RD.ScreenGuard
         }
 
         // =========================================================
-        // COMPUTADORES ONLINE
+        // ATUALIZAR COMPUTADORES
         // =========================================================
 
         private async Task AtualizarComputadoresAsync()
@@ -1460,13 +1562,13 @@ namespace RD.ScreenGuard
                         deviceId,
                         "COMPUTADOR 01");
 
-            var list =
+            List<ScreenGuardDevice> list =
                 await RemoteCommandService
                     .ObterComputadoresAsync(
                         auth.AccessToken,
                         deviceId);
 
-            var remote =
+            ScreenGuardDevice? remote =
                 list.Find(
                     x =>
                         x.Id != deviceId &&
@@ -1568,7 +1670,7 @@ namespace RD.ScreenGuard
         }
 
         // =========================================================
-        // APLICAR
+        // APLICAR COMANDO
         // =========================================================
 
         private void AplicarComando(
@@ -1586,7 +1688,8 @@ namespace RD.ScreenGuard
 
             RestaurarLocal();
 
-            foreach (Screen screen
+            foreach (
+                Screen screen
                 in Screen.AllScreens)
             {
                 OverlayForm overlay;
@@ -1647,7 +1750,7 @@ namespace RD.ScreenGuard
         }
 
         // =========================================================
-        // RESTAURAR LOCAL
+        // RESTAURAR TELA LOCAL
         // =========================================================
 
         private void RestaurarLocal()
