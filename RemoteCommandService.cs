@@ -31,44 +31,69 @@ namespace RD.ScreenGuard
             new HttpClient { Timeout = TimeSpan.FromSeconds(20) };
 
         public static async Task<bool> RegistrarComputadorAsync(
-            string token, string deviceId, string nome)
+            string token,
+            string deviceId,
+            string nome)
         {
             try
             {
-                using var request = CriarRequest(token, new Dictionary<string, string>
-                {
-                    ["action"] = "device_register",
-                    ["device_id"] = deviceId,
-                    ["device_name"] = nome
-                });
+                using var request = CriarRequest(token,
+                    new Dictionary<string, string>
+                    {
+                        ["action"] = "device_register",
+                        ["device_id"] = deviceId,
+                        ["device_name"] = nome
+                    });
 
                 using var response = await Http.SendAsync(request);
-                return response.IsSuccessStatusCode;
+
+                // Verifica se a resposta HTTP foi bem-sucedida.
+                if (!response.IsSuccessStatusCode)
+                    return false;
+
+                // Também verifica o retorno JSON do servidor.
+                string conteudo =
+                    await response.Content.ReadAsStringAsync();
+
+                using JsonDocument doc = JsonDocument.Parse(conteudo);
+                JsonElement root = doc.RootElement;
+
+                return Bool(root, "success", "sucesso", "ok");
             }
-            catch { return false; }
+            catch
+            {
+                return false;
+            }
         }
 
-        public static async Task<List<ScreenGuardDevice>> ObterComputadoresAsync(
-            string token, string deviceId)
+        public static async Task<List<ScreenGuardDevice>>
+            ObterComputadoresAsync(string token, string deviceId)
         {
             try
             {
-                using var request = CriarRequest(token, new Dictionary<string, string>
-                {
-                    ["action"] = "devices",
-                    ["device_id"] = deviceId
-                });
+                using var request = CriarRequest(token,
+                    new Dictionary<string, string>
+                    {
+                        ["action"] = "devices",
+                        ["device_id"] = deviceId
+                    });
 
                 using var response = await Http.SendAsync(request);
+
                 if (!response.IsSuccessStatusCode)
                     return new List<ScreenGuardDevice>();
 
-                using JsonDocument doc =
-                    JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+                string conteudo =
+                    await response.Content.ReadAsStringAsync();
 
-                if (!doc.RootElement.TryGetProperty("devices", out var lista) ||
+                using JsonDocument doc = JsonDocument.Parse(conteudo);
+
+                if (!doc.RootElement.TryGetProperty(
+                        "devices", out var lista) ||
                     lista.ValueKind != JsonValueKind.Array)
+                {
                     return new List<ScreenGuardDevice>();
+                }
 
                 var resultado = new List<ScreenGuardDevice>();
 
@@ -84,7 +109,10 @@ namespace RD.ScreenGuard
 
                 return resultado;
             }
-            catch { return new List<ScreenGuardDevice>(); }
+            catch
+            {
+                return new List<ScreenGuardDevice>();
+            }
         }
 
         public static async Task<bool> EnviarComandoAsync(
@@ -114,28 +142,34 @@ namespace RD.ScreenGuard
 
                 return response.IsSuccessStatusCode;
             }
-            catch { return false; }
+            catch
+            {
+                return false;
+            }
         }
 
-        public static async Task<ScreenGuardCommand?> BuscarComandoAsync(
-            string token, string deviceId)
+        public static async Task<ScreenGuardCommand?>
+            BuscarComandoAsync(string token, string deviceId)
         {
             try
             {
-                using var request = CriarRequest(token, new Dictionary<string, string>
-                {
-                    ["action"] = "poll",
-                    ["device_id"] = deviceId
-                });
+                using var request = CriarRequest(token,
+                    new Dictionary<string, string>
+                    {
+                        ["action"] = "poll",
+                        ["device_id"] = deviceId
+                    });
 
                 using var response = await Http.SendAsync(request);
+
                 if (!response.IsSuccessStatusCode)
                     return null;
 
-                using JsonDocument doc =
-                    JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+                string conteudo =
+                    await response.Content.ReadAsStringAsync();
 
-                var root = doc.RootElement;
+                using JsonDocument doc = JsonDocument.Parse(conteudo);
+                JsonElement root = doc.RootElement;
 
                 if (!Bool(root, "has_command", "hasCommand"))
                     return null;
@@ -151,50 +185,71 @@ namespace RD.ScreenGuard
                     ImagemBase64 = Texto(command, "image", "imagem")
                 };
             }
-            catch { return null; }
+            catch
+            {
+                return null;
+            }
         }
 
         public static async Task ConfirmarComandoAsync(
-            string token, string deviceId, string commandId)
+            string token,
+            string deviceId,
+            string commandId)
         {
             if (string.IsNullOrWhiteSpace(commandId))
                 return;
 
             try
             {
-                using var request = CriarRequest(token, new Dictionary<string, string>
-                {
-                    ["action"] = "ack",
-                    ["device_id"] = deviceId,
-                    ["command_id"] = commandId
-                });
+                using var request = CriarRequest(token,
+                    new Dictionary<string, string>
+                    {
+                        ["action"] = "ack",
+                        ["device_id"] = deviceId,
+                        ["command_id"] = commandId
+                    });
 
                 using var response = await Http.SendAsync(request);
             }
-            catch { }
+            catch
+            {
+                // Falha ao confirmar o comando.
+            }
         }
 
         private static HttpRequestMessage CriarRequest(
-            string token, Dictionary<string, string> dados)
+            string token,
+            Dictionary<string, string> dados)
         {
-            var request = new HttpRequestMessage(HttpMethod.Post, ApiUrl);
+            string action = dados.TryGetValue("action", out var valor)
+                ? valor
+                : "";
+
+            // Envia a ação na URL para servidores que leem $_GET['action'].
+            string url = string.IsNullOrWhiteSpace(action)
+                ? ApiUrl
+                : $"{ApiUrl}&action={Uri.EscapeDataString(action)}";
+
+            var request = new HttpRequestMessage(
+                HttpMethod.Post, url);
 
             if (!string.IsNullOrWhiteSpace(token))
             {
                 request.Headers.Authorization =
                     new AuthenticationHeaderValue("Bearer", token);
 
-                // Fallback caso o servidor/proxy não entregue
-                // o cabeçalho Authorization ao PHP.
+                // Alternativa caso o servidor não receba Authorization.
                 dados["access_token"] = token;
             }
 
             request.Content = new FormUrlEncodedContent(dados);
+
             return request;
         }
 
         private static string Texto(
-            JsonElement root, params string[] nomes)
+            JsonElement root,
+            params string[] nomes)
         {
             foreach (var nome in nomes)
             {
@@ -210,7 +265,8 @@ namespace RD.ScreenGuard
         }
 
         private static bool Bool(
-            JsonElement root, params string[] nomes)
+            JsonElement root,
+            params string[] nomes)
         {
             foreach (var nome in nomes)
             {
@@ -222,13 +278,17 @@ namespace RD.ScreenGuard
 
                 if (valor.ValueKind == JsonValueKind.Number &&
                     valor.TryGetInt32(out var numero))
+                {
                     return numero == 1;
+                }
 
                 if (valor.ValueKind == JsonValueKind.String)
                 {
                     string texto = valor.GetString() ?? "";
+
                     return texto == "1" ||
-                           texto.Equals("true",
+                           texto.Equals(
+                               "true",
                                StringComparison.OrdinalIgnoreCase);
                 }
             }
