@@ -9,11 +9,17 @@ namespace RD.ScreenGuard
         static void Main()
         {
             ApplicationConfiguration.Initialize();
+
             using (LoginForm login = new LoginForm())
             {
-                if (login.ShowDialog() != DialogResult.OK || login.ResultadoAutenticacao == null)
+                if (login.ShowDialog() != DialogResult.OK)
+                {
                     return;
-                Application.Run(new MainForm(login.ResultadoAutenticacao));
+                }
+
+                Application.Run(
+                    new MainForm(
+                        login.ResultadoLogin));
             }
         }
     }
