@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Drawing;
-using System.Drawing.Drawing2D;
 using System.IO;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -33,6 +32,8 @@ namespace RD.ScreenGuard
         private Label lblPc1Status = null!;
         private Label lblPc2Status = null!;
         private Label lblImage = null!;
+        private Label lblEmpresa = null!;
+        private Label lblDevice = null!;
 
         private Panel cardPc1 = null!;
         private Panel cardPc2 = null!;
@@ -41,35 +42,45 @@ namespace RD.ScreenGuard
         private Button btnRestore = null!;
         private Button btnImage = null!;
 
-        private Color BackgroundColor =
+        private readonly Color Background =
             Color.FromArgb(7, 11, 18);
 
-        private Color CardColor =
-            Color.FromArgb(13, 20, 30);
+        private readonly Color Header =
+            Color.FromArgb(10, 17, 27);
 
-        private Color CardBorder =
-            Color.FromArgb(31, 43, 58);
+        private readonly Color Card =
+            Color.FromArgb(14, 22, 33);
 
-        private Color Blue =
-            Color.FromArgb(0, 150, 255);
+        private readonly Color CardDark =
+            Color.FromArgb(9, 16, 25);
 
-        private Color Green =
+        private readonly Color Border =
+            Color.FromArgb(35, 50, 67);
+
+        private readonly Color Blue =
+            Color.FromArgb(0, 145, 245);
+
+        private readonly Color Green =
             Color.FromArgb(45, 210, 120);
 
-        private Color Red =
-            Color.FromArgb(235, 70, 75);
+        private readonly Color Red =
+            Color.FromArgb(205, 45, 55);
 
         public MainForm(RdSistemasAuthResult result)
         {
             auth = result;
             deviceId = DeviceIdentity.GetDeviceId();
 
-            InitializeModernForm();
-            BuildModernUi();
-            StartRemoteLoop();
+            CriarJanela();
+            CriarInterface();
+            IniciarComunicacao();
         }
 
-        private void InitializeModernForm()
+        // =========================================================
+        // JANELA
+        // =========================================================
+
+        private void CriarJanela()
         {
             Text = "RD Screen Guard";
 
@@ -80,10 +91,10 @@ namespace RD.ScreenGuard
                 new Size(1180, 760);
 
             MinimumSize =
-                new Size(1050, 700);
+                new Size(1050, 680);
 
             BackColor =
-                BackgroundColor;
+                Background;
 
             Font =
                 new Font(
@@ -91,790 +102,531 @@ namespace RD.ScreenGuard
                     9F);
 
             DoubleBuffered = true;
+
+            FormClosed += (s, e) =>
+            {
+                timer?.Stop();
+                RestaurarLocal();
+            };
         }
 
-        private void BuildModernUi()
+        // =========================================================
+        // INTERFACE
+        // =========================================================
+
+        private void CriarInterface()
         {
+            CriarCabecalho();
+
+            TableLayoutPanel principal =
+                new TableLayoutPanel
+                {
+                    Dock = DockStyle.Fill,
+                    BackColor = Background,
+                    Padding =
+                        new Padding(
+                            24,
+                            18,
+                            24,
+                            18),
+
+                    ColumnCount = 2,
+                    RowCount = 2
+                };
+
+            principal.ColumnStyles.Add(
+                new ColumnStyle(
+                    SizeType.Percent,
+                    43F));
+
+            principal.ColumnStyles.Add(
+                new ColumnStyle(
+                    SizeType.Percent,
+                    57F));
+
+            principal.RowStyles.Add(
+                new RowStyle(
+                    SizeType.Absolute,
+                    330F));
+
+            principal.RowStyles.Add(
+                new RowStyle(
+                    SizeType.Percent,
+                    100F));
+
+            Controls.Add(principal);
+
             // =====================================================
-            // CABEÇALHO
+            // COMPUTADORES
             // =====================================================
 
-            Panel header = new Panel
-            {
-                Dock = DockStyle.Top,
-                Height = 105,
-                BackColor = Color.FromArgb(9, 15, 24)
-            };
+            Panel computadores =
+                CriarCard(
+                    "COMPUTADORES",
+                    "Selecione o computador que receberá a ação.");
+
+            principal.Controls.Add(
+                computadores,
+                0,
+                0);
+
+            CriarComputadores(computadores);
+
+            // =====================================================
+            // AÇÃO
+            // =====================================================
+
+            Panel acao =
+                CriarCard(
+                    "AÇÃO DE TELA",
+                    "Escolha o que será exibido no computador.");
+
+            principal.Controls.Add(
+                acao,
+                1,
+                0);
+
+            CriarAcao(acao);
+
+            // =====================================================
+            // CONTROLE
+            // =====================================================
+
+            Panel controle =
+                CriarCard(
+                    "CONTROLE",
+                    "Execute ou restaure a tela do computador selecionado.");
+
+            principal.Controls.Add(
+                controle,
+                0,
+                1);
+
+            principal.SetColumnSpan(
+                controle,
+                2);
+
+            CriarControle(controle);
+        }
+
+        // =========================================================
+        // CABEÇALHO
+        // =========================================================
+
+        private void CriarCabecalho()
+        {
+            Panel header =
+                new Panel
+                {
+                    Dock = DockStyle.Top,
+                    Height = 100,
+                    BackColor = Header
+                };
 
             Controls.Add(header);
 
-            Label logo = new Label
-            {
-                Text = "◈",
-                ForeColor = Blue,
-                Font = new Font(
-                    "Segoe UI",
-                    34,
-                    FontStyle.Bold),
-                AutoSize = true,
-                Location =
-                    new Point(28, 22)
-            };
-
-            header.Controls.Add(logo);
-
-            Label title = new Label
-            {
-                Text = "RD SCREEN GUARD",
-                ForeColor = Color.White,
-                Font = new Font(
-                    "Segoe UI",
-                    24,
-                    FontStyle.Bold),
-                AutoSize = true,
-                Location =
-                    new Point(78, 20)
-            };
-
-            header.Controls.Add(title);
-
-            Label subtitle = new Label
-            {
-                Text = "CONTROLE DE TELAS REMOTO",
-                ForeColor =
-                    Color.FromArgb(
-                        110,
-                        170,
-                        220),
-                Font = new Font(
-                    "Segoe UI",
-                    9,
-                    FontStyle.Bold),
-                AutoSize = true,
-                Location =
-                    new Point(82, 61)
-            };
-
-            header.Controls.Add(subtitle);
-
-            Panel statusCard =
-                CreateRoundedPanel(
-                    Color.FromArgb(
-                        14,
-                        25,
-                        36),
-                    150);
-
-            statusCard.Location =
-                new Point(
-                    980,
-                    30);
-
-            statusCard.Size =
-                new Size(
-                    165,
-                    45);
-
-            header.Controls.Add(statusCard);
-
-            lblStatus = new Label
-            {
-                Text = "● CONECTANDO",
-                ForeColor = Color.Gold,
-                Font = new Font(
-                    "Segoe UI",
-                    9,
-                    FontStyle.Bold),
-                AutoSize = true,
-                Location =
-                    new Point(
-                        18,
-                        13)
-            };
-
-            statusCard.Controls.Add(
-                lblStatus);
-
-            // =====================================================
-            // ÁREA PRINCIPAL
-            // =====================================================
-
-            Panel content = new Panel
-            {
-                Dock = DockStyle.Fill,
-                Padding =
-                    new Padding(
-                        24,
-                        20,
-                        24,
-                        20),
-                BackColor =
-                    BackgroundColor
-            };
-
-            Controls.Add(content);
-
-            // =====================================================
-            // CARD COMPUTADORES
-            // =====================================================
-
-            Panel computers =
-                CreateCard(
-                    "COMPUTADORES",
-                    "Selecione qual computador receberá o comando.");
-
-            computers.Location =
-                new Point(
-                    24,
-                    20);
-
-            computers.Size =
-                new Size(
-                    500,
-                    325);
-
-            content.Controls.Add(computers);
-
-            // PC 01
-
-            cardPc1 =
-                CreateComputerCard(
-                    "COMPUTADOR 01",
-                    "Este computador",
-                    true);
-
-            cardPc1.Location =
-                new Point(
-                    20,
-                    65);
-
-            cardPc1.Size =
-                new Size(
-                    455,
-                    85);
-
-            computers.Controls.Add(
-                cardPc1);
-
-            pc1 =
-                CreateComputerCheck();
-
-            pc1.Location =
-                new Point(
-                    15,
-                    18);
-
-            pc1.CheckedChanged +=
-                (s, e) =>
-                {
-                    if (pc1.Checked)
-                    {
-                        pc2.Checked = false;
-                        DestacarComputador(cardPc1);
-                        RemoverDestaque(cardPc2);
-                    }
-                };
-
-            cardPc1.Controls.Add(pc1);
-
-            lblPc1Status = new Label
-            {
-                Text = "● Verificando...",
-                ForeColor = Color.Gold,
-                Font = new Font(
-                    "Segoe UI",
-                    8.5F,
-                    FontStyle.Bold),
-                AutoSize = true,
-                Location =
-                    new Point(
-                        38,
-                        47)
-            };
-
-            cardPc1.Controls.Add(
-                lblPc1Status);
-
-            // PC 02
-
-            cardPc2 =
-                CreateComputerCard(
-                    "COMPUTADOR 02",
-                    "Computador remoto",
-                    false);
-
-            cardPc2.Location =
-                new Point(
-                    20,
-                    165);
-
-            cardPc2.Size =
-                new Size(
-                    455,
-                    85);
-
-            computers.Controls.Add(
-                cardPc2);
-
-            pc2 =
-                CreateComputerCheck();
-
-            pc2.Location =
-                new Point(
-                    15,
-                    18);
-
-            pc2.CheckedChanged +=
-                (s, e) =>
-                {
-                    if (pc2.Checked)
-                    {
-                        pc1.Checked = false;
-                        DestacarComputador(cardPc2);
-                        RemoverDestaque(cardPc1);
-                    }
-                };
-
-            cardPc2.Controls.Add(pc2);
-
-            lblPc2Status = new Label
-            {
-                Text =
-                    "● Aguardando conexão",
-                ForeColor = Color.Gray,
-                Font = new Font(
-                    "Segoe UI",
-                    8.5F,
-                    FontStyle.Bold),
-                AutoSize = true,
-                Location =
-                    new Point(
-                        38,
-                        47)
-            };
-
-            cardPc2.Controls.Add(
-                lblPc2Status);
-
-            Label company = new Label
-            {
-                Text =
-                    $"Empresa: {auth.Empresa ?? "-"}",
-                ForeColor =
-                    Color.FromArgb(
-                        150,
-                        165,
-                        180),
-                AutoSize = true,
-                Location =
-                    new Point(
-                        20,
-                        270)
-            };
-
-            computers.Controls.Add(
-                company);
-
-            Label device = new Label
-            {
-                Text =
-                    $"ID: {deviceId}",
-                ForeColor =
-                    Color.FromArgb(
-                        105,
-                        120,
-                        135),
-                AutoSize = true,
-                Location =
-                    new Point(
-                        20,
-                        294)
-            };
-
-            computers.Controls.Add(device);
-
-            // =====================================================
-            // CARD AÇÃO
-            // =====================================================
-
-            Panel actions =
-                CreateCard(
-                    "AÇÃO DE TELA",
-                    "Escolha o tipo de proteção.");
-
-            actions.Location =
-                new Point(
-                    545,
-                    20);
-
-            actions.Size =
-                new Size(
-                    610,
-                    325);
-
-            content.Controls.Add(actions);
-
-            // Tela preta
-
-            rbBlack =
-                CreateRadio(
-                    "TELA PRETA",
-                    "Escurece completamente a tela.",
-                    true);
-
-            rbBlack.Location =
-                new Point(
-                    25,
-                    67);
-
-            actions.Controls.Add(
-                rbBlack);
-
-            // Imagem
-
-            rbImage =
-                CreateRadio(
-                    "IMAGEM",
-                    "Exibe uma imagem personalizada.");
-
-            rbImage.Location =
-                new Point(
-                    25,
-                    112);
-
-            actions.Controls.Add(
-                rbImage);
-
-            // Mensagem
-
-            rbText =
-                CreateRadio(
-                    "MENSAGEM",
-                    "Exibe um aviso personalizado.");
-
-            rbText.Location =
-                new Point(
-                    25,
-                    157);
-
-            actions.Controls.Add(
-                rbText);
-
-            Label messageTitle =
+            Label logo =
                 new Label
                 {
-                    Text =
-                        "MENSAGEM / CONFIGURAÇÃO",
-                    ForeColor =
-                        Color.FromArgb(
-                            110,
-                            180,
-                            240),
+                    Text = "RD",
+                    ForeColor = Blue,
                     Font =
                         new Font(
                             "Segoe UI",
-                            8.5F,
+                            27,
                             FontStyle.Bold),
-                    AutoSize = true,
-                    Location =
-                        new Point(
-                            300,
-                            67)
-                };
-
-            actions.Controls.Add(
-                messageTitle);
-
-            txtMessage =
-                new TextBox
-                {
-                    Multiline = true,
-                    ForeColor = Color.White,
-                    BackColor =
-                        Color.FromArgb(
-                            8,
-                            14,
-                            22),
-                    BorderStyle =
-                        BorderStyle.FixedSingle,
-                    Font =
-                        new Font(
-                            "Segoe UI",
-                            9.5F),
-                    Location =
-                        new Point(
-                            300,
-                            92),
-                    Size =
-                        new Size(
-                            280,
-                            80),
-                    Text =
-                        "MANUTENÇÃO EM ANDAMENTO\r\n" +
-                        "POR FAVOR AGUARDE..."
-                };
-
-            actions.Controls.Add(
-                txtMessage);
-
-            btnImage =
-                CreateModernButton(
-                    "🖼  ESCOLHER IMAGEM",
-                    Blue);
-
-            btnImage.Location =
-                new Point(
-                    300,
-                    188);
-
-            btnImage.Size =
-                new Size(
-                    280,
-                    42);
-
-            btnImage.Click +=
-                (s, e) =>
-                    ChooseImage();
-
-            actions.Controls.Add(
-                btnImage);
-
-            lblImage =
-                new Label
-                {
-                    Text =
-                        "Nenhuma imagem selecionada",
-                    ForeColor =
-                        Color.FromArgb(
-                            115,
-                            130,
-                            145),
-                    Font =
-                        new Font(
-                            "Segoe UI",
-                            8.5F),
-                    AutoSize = false,
-                    TextAlign =
-                        ContentAlignment.MiddleCenter,
-                    Location =
-                        new Point(
-                            300,
-                            238),
-                    Size =
-                        new Size(
-                            280,
-                            40)
-                };
-
-            actions.Controls.Add(
-                lblImage);
-
-            // =====================================================
-            // CARD AÇÕES
-            // =====================================================
-
-            Panel commandCard =
-                CreateCard(
-                    "CONTROLE",
-                    "Execute a ação no computador selecionado.");
-
-            commandCard.Location =
-                new Point(
-                    24,
-                    370);
-
-            commandCard.Size =
-                new Size(
-                    1131,
-                    170);
-
-            content.Controls.Add(
-                commandCard);
-
-            btnExecute =
-                CreateModernButton(
-                    "▶   EXECUTAR AÇÃO",
-                    Color.FromArgb(
-                        0,
-                        125,
-                        245));
-
-            btnExecute.Location =
-                new Point(
-                    25,
-                    70);
-
-            btnExecute.Size =
-                new Size(
-                    520,
-                    65);
-
-            btnExecute.Click +=
-                async (s, e) =>
-                    await ExecuteAsync();
-
-            commandCard.Controls.Add(
-                btnExecute);
-
-            btnRestore =
-                CreateModernButton(
-                    "■   RESTAURAR TELA",
-                    Color.FromArgb(
-                        190,
-                        45,
-                        55));
-
-            btnRestore.Location =
-                new Point(
-                    575,
-                    70);
-
-            btnRestore.Size =
-                new Size(
-                    520,
-                    65);
-
-            btnRestore.Click +=
-                async (s, e) =>
-                    await RestoreAsync();
-
-            commandCard.Controls.Add(
-                btnRestore);
-
-            // =====================================================
-            // RODAPÉ
-            // =====================================================
-
-            Label footer =
-                new Label
-                {
-                    Text =
-                        "RD SCREEN GUARD   •   RD SISTEMAS   •   Proteção de tela",
-
-                    ForeColor =
-                        Color.FromArgb(
-                            85,
-                            105,
-                            120),
 
                     AutoSize = true,
 
                     Location =
                         new Point(
                             28,
-                            565)
+                            20)
                 };
 
-            content.Controls.Add(
-                footer);
+            header.Controls.Add(logo);
 
-            // Seleciona PC01 visualmente
+            Label title =
+                new Label
+                {
+                    Text = "SCREEN GUARD",
+                    ForeColor = Color.White,
+
+                    Font =
+                        new Font(
+                            "Segoe UI",
+                            25,
+                            FontStyle.Bold),
+
+                    AutoSize = true,
+
+                    Location =
+                        new Point(
+                            87,
+                            19)
+                };
+
+            header.Controls.Add(title);
+
+            Label subtitle =
+                new Label
+                {
+                    Text =
+                        "CONTROLE DE TELAS REMOTO",
+
+                    ForeColor =
+                        Color.FromArgb(
+                            100,
+                            180,
+                            235),
+
+                    Font =
+                        new Font(
+                            "Segoe UI",
+                            9,
+                            FontStyle.Bold),
+
+                    AutoSize = true,
+
+                    Location =
+                        new Point(
+                            90,
+                            61)
+                };
+
+            header.Controls.Add(subtitle);
+
+            Panel status =
+                new Panel
+                {
+                    Size =
+                        new Size(
+                            185,
+                            46),
+
+                    Anchor =
+                        AnchorStyles.Top |
+                        AnchorStyles.Right,
+
+                    BackColor =
+                        Color.FromArgb(
+                            15,
+                            27,
+                            39),
+
+                    Location =
+                        new Point(
+                            ClientSize.Width - 215,
+                            27)
+                };
+
+            header.Controls.Add(status);
+
+            lblStatus =
+                new Label
+                {
+                    Text =
+                        "● AGUARDANDO SERVIDOR",
+
+                    ForeColor =
+                        Color.Gold,
+
+                    Font =
+                        new Font(
+                            "Segoe UI",
+                            8.5F,
+                            FontStyle.Bold),
+
+                    AutoSize = false,
+
+                    TextAlign =
+                        ContentAlignment.MiddleCenter,
+
+                    Dock = DockStyle.Fill
+                };
+
+            status.Controls.Add(
+                lblStatus);
+
+            header.Resize +=
+                (s, e) =>
+                {
+                    status.Left =
+                        header.ClientSize.Width -
+                        status.Width -
+                        25;
+                };
+        }
+
+        // =========================================================
+        // COMPUTADORES
+        // =========================================================
+
+        private void CriarComputadores(
+            Panel container)
+        {
+            TableLayoutPanel tabela =
+                new TableLayoutPanel
+                {
+                    Dock = DockStyle.Fill,
+
+                    ColumnCount = 1,
+                    RowCount = 4,
+
+                    Padding =
+                        new Padding(
+                            18,
+                            65,
+                            18,
+                            15)
+                };
+
+            tabela.RowStyles.Add(
+                new RowStyle(
+                    SizeType.Absolute,
+                    78));
+
+            tabela.RowStyles.Add(
+                new RowStyle(
+                    SizeType.Absolute,
+                    78));
+
+            tabela.RowStyles.Add(
+                new RowStyle(
+                    SizeType.Absolute,
+                    28));
+
+            tabela.RowStyles.Add(
+                new RowStyle(
+                    SizeType.Absolute,
+                    25));
+
+            container.Controls.Add(tabela);
+
+            // PC 01
+
+            cardPc1 =
+                CriarCardComputador();
+
+            tabela.Controls.Add(
+                cardPc1,
+                0,
+                0);
+
+            pc1 =
+                CriarCheckBox(
+                    "COMPUTADOR 01");
+
+            cardPc1.Controls.Add(
+                pc1);
+
+            pc1.Location =
+                new Point(
+                    15,
+                    12);
+
+            lblPc1Status =
+                CriarStatusLabel(
+                    "● Verificando...",
+                    Color.Gold);
+
+            cardPc1.Controls.Add(
+                lblPc1Status);
+
+            lblPc1Status.Location =
+                new Point(
+                    40,
+                    42);
+
+            Label icon1 =
+                CriarIcone("01");
+
+            cardPc1.Controls.Add(
+                icon1);
+
+            icon1.Anchor =
+                AnchorStyles.Top |
+                AnchorStyles.Right;
+
+            icon1.Location =
+                new Point(
+                    cardPc1.Width - 52,
+                    23);
+
+            // PC 02
+
+            cardPc2 =
+                CriarCardComputador();
+
+            tabela.Controls.Add(
+                cardPc2,
+                0,
+                1);
+
+            pc2 =
+                CriarCheckBox(
+                    "COMPUTADOR 02");
+
+            cardPc2.Controls.Add(
+                pc2);
+
+            pc2.Location =
+                new Point(
+                    15,
+                    12);
+
+            lblPc2Status =
+                CriarStatusLabel(
+                    "● Aguardando conexão",
+                    Color.Gray);
+
+            cardPc2.Controls.Add(
+                lblPc2Status);
+
+            lblPc2Status.Location =
+                new Point(
+                    40,
+                    42);
+
+            Label icon2 =
+                CriarIcone("02");
+
+            cardPc2.Controls.Add(
+                icon2);
+
+            icon2.Anchor =
+                AnchorStyles.Top |
+                AnchorStyles.Right;
+
+            icon2.Location =
+                new Point(
+                    cardPc2.Width - 52,
+                    23);
+
+            // Empresa
+
+            lblEmpresa =
+                new Label
+                {
+                    Text =
+                        "Empresa: " +
+                        (auth.Empresa ?? "-"),
+
+                    ForeColor =
+                        Color.FromArgb(
+                            150,
+                            165,
+                            180),
+
+                    AutoSize = true
+                };
+
+            tabela.Controls.Add(
+                lblEmpresa,
+                0,
+                2);
+
+            // ID
+
+            lblDevice =
+                new Label
+                {
+                    Text =
+                        "ID: " +
+                        deviceId,
+
+                    ForeColor =
+                        Color.FromArgb(
+                            100,
+                            115,
+                            130),
+
+                    AutoSize = true
+                };
+
+            tabela.Controls.Add(
+                lblDevice,
+                0,
+                3);
+
+            // Eventos
+
+            pc1.CheckedChanged +=
+                (s, e) =>
+                {
+                    if (!pc1.Checked)
+                        return;
+
+                    pc2.Checked = false;
+
+                    Destacar(
+                        cardPc1);
+
+                    RemoverDestaque(
+                        cardPc2);
+                };
+
+            pc2.CheckedChanged +=
+                (s, e) =>
+                {
+                    if (!pc2.Checked)
+                        return;
+
+                    pc1.Checked = false;
+
+                    Destacar(
+                        cardPc2);
+
+                    RemoverDestaque(
+                        cardPc1);
+                };
+
             pc1.Checked = true;
         }
 
-        // =========================================================
-        // CARD
-        // =========================================================
-
-        private Panel CreateCard(
-            string title,
-            string description)
-        {
-            Panel panel =
-                CreateRoundedPanel(
-                    CardColor,
-                    12);
-
-            panel.BorderStyle =
-                BorderStyle.FixedSingle;
-
-            Label titleLabel =
-                new Label
-                {
-                    Text = title,
-                    ForeColor =
-                        Color.FromArgb(
-                            95,
-                            185,
-                            255),
-                    Font =
-                        new Font(
-                            "Segoe UI",
-                            12,
-                            FontStyle.Bold),
-                    AutoSize = true,
-                    Location =
-                        new Point(
-                            20,
-                            16)
-                };
-
-            panel.Controls.Add(
-                titleLabel);
-
-            Label descriptionLabel =
-                new Label
-                {
-                    Text = description,
-                    ForeColor =
-                        Color.FromArgb(
-                            115,
-                            130,
-                            145),
-                    Font =
-                        new Font(
-                            "Segoe UI",
-                            8.5F),
-                    AutoSize = true,
-                    Location =
-                        new Point(
-                            20,
-                            40)
-                };
-
-            panel.Controls.Add(
-                descriptionLabel);
-
-            return panel;
-        }
-
-        private Panel CreateRoundedPanel(
-            Color color,
-            int radius)
+        private Panel CriarCardComputador()
         {
             Panel panel =
                 new Panel
                 {
-                    BackColor = color
+                    Dock = DockStyle.Fill,
+
+                    BackColor =
+                        CardDark,
+
+                    Margin =
+                        new Padding(
+                            0,
+                            4,
+                            0,
+                            4)
                 };
 
             panel.Paint +=
-                (sender, e) =>
+                (s, e) =>
                 {
-                    Graphics g =
-                        e.Graphics;
-
-                    g.SmoothingMode =
-                        SmoothingMode.AntiAlias;
-
-                    using GraphicsPath path =
-                        RoundedPath(
-                            panel.ClientRectangle,
-                            radius);
-
                     using Pen pen =
                         new Pen(
-                            CardBorder,
-                            1);
+                            Border);
 
-                    g.DrawPath(
+                    e.Graphics.DrawRectangle(
                         pen,
-                        path);
+                        0,
+                        0,
+                        panel.Width - 1,
+                        panel.Height - 1);
                 };
 
             return panel;
         }
 
-        private GraphicsPath RoundedPath(
-            Rectangle rect,
-            int radius)
-        {
-            GraphicsPath path =
-                new GraphicsPath();
-
-            int diameter =
-                radius * 2;
-
-            Rectangle arc =
-                new Rectangle(
-                    rect.X,
-                    rect.Y,
-                    diameter,
-                    diameter);
-
-            path.AddArc(
-                arc,
-                180,
-                90);
-
-            arc.X =
-                rect.Right -
-                diameter;
-
-            path.AddArc(
-                arc,
-                270,
-                90);
-
-            arc.Y =
-                rect.Bottom -
-                diameter;
-
-            path.AddArc(
-                arc,
-                0,
-                90);
-
-            arc.X =
-                rect.X;
-
-            path.AddArc(
-                arc,
-                90,
-                90);
-
-            path.CloseFigure();
-
-            return path;
-        }
-
-        // =========================================================
-        // COMPUTADOR
-        // =========================================================
-
-        private Panel CreateComputerCard(
-            string name,
-            string description,
-            bool local)
-        {
-            Panel card =
-                CreateRoundedPanel(
-                    Color.FromArgb(
-                        10,
-                        18,
-                        28),
-                    10);
-
-            Label icon =
-                new Label
-                {
-                    Text = local
-                        ? "▣"
-                        : "▤",
-                    ForeColor =
-                        Blue,
-                    Font =
-                        new Font(
-                            "Segoe UI",
-                            18,
-                            FontStyle.Bold),
-                    AutoSize = true,
-                    Location =
-                        new Point(
-                            405,
-                            14)
-                };
-
-            card.Controls.Add(
-                icon);
-
-            return card;
-        }
-
-        private CheckBox CreateComputerCheck()
+        private CheckBox CriarCheckBox(
+            string text)
         {
             return new CheckBox
             {
+                Text = text,
+
                 ForeColor =
                     Color.White,
 
@@ -888,42 +640,158 @@ namespace RD.ScreenGuard
             };
         }
 
-        private void DestacarComputador(
-            Panel panel)
+        private Label CriarStatusLabel(
+            string text,
+            Color color)
         {
-            panel.BackColor =
-                Color.FromArgb(
-                    15,
-                    34,
-                    52);
+            return new Label
+            {
+                Text = text,
+
+                ForeColor = color,
+
+                Font =
+                    new Font(
+                        "Segoe UI",
+                        8.5F,
+                        FontStyle.Bold),
+
+                AutoSize = true
+            };
         }
 
-        private void RemoverDestaque(
-            Panel panel)
+        private Label CriarIcone(
+            string numero)
         {
-            panel.BackColor =
-                Color.FromArgb(
-                    10,
-                    18,
-                    28);
+            return new Label
+            {
+                Text = numero,
+
+                ForeColor = Blue,
+
+                Font =
+                    new Font(
+                        "Segoe UI",
+                        10,
+                        FontStyle.Bold),
+
+                AutoSize = true
+            };
         }
 
         // =========================================================
-        // RADIO
+        // AÇÃO
         // =========================================================
 
-        private RadioButton CreateRadio(
-            string title,
-            string description,
-            bool selected = false)
+        private void CriarAcao(
+            Panel container)
         {
-            RadioButton radio =
+            TableLayoutPanel tabela =
+                new TableLayoutPanel
+                {
+                    Dock = DockStyle.Fill,
+
+                    ColumnCount = 2,
+                    RowCount = 4,
+
+                    Padding =
+                        new Padding(
+                            18,
+                            62,
+                            18,
+                            15)
+                };
+
+            tabela.ColumnStyles.Add(
+                new ColumnStyle(
+                    SizeType.Percent,
+                    45F));
+
+            tabela.ColumnStyles.Add(
+                new ColumnStyle(
+                    SizeType.Percent,
+                    55F));
+
+            tabela.RowStyles.Add(
+                new RowStyle(
+                    SizeType.Absolute,
+                    45));
+
+            tabela.RowStyles.Add(
+                new RowStyle(
+                    SizeType.Absolute,
+                    45));
+
+            tabela.RowStyles.Add(
+                new RowStyle(
+                    SizeType.Absolute,
+                    45));
+
+            tabela.RowStyles.Add(
+                new RowStyle(
+                    SizeType.Percent,
+                    100));
+
+            container.Controls.Add(
+                tabela);
+
+            // =====================================================
+            // TELA PRETA
+            // =====================================================
+
+            Panel blackPanel =
+                CriarOpcao(
+                    "TELA PRETA",
+                    "Escurecer completamente a tela.");
+
+            tabela.Controls.Add(
+                blackPanel,
+                0,
+                0);
+
+            rbBlack =
                 new RadioButton
                 {
-                    Text =
-                        title +
-                        "   —   " +
-                        description,
+                    Text = "TELA PRETA",
+                    ForeColor = Color.White,
+
+                    Font =
+                        new Font(
+                            "Segoe UI",
+                            9,
+                            FontStyle.Bold),
+
+                    AutoSize = true,
+
+                    Location =
+                        new Point(
+                            8,
+                            5),
+
+                    Checked = true
+                };
+
+            blackPanel.Controls.Add(
+                rbBlack);
+
+            // =====================================================
+            // IMAGEM
+            // =====================================================
+
+            Panel imagePanel =
+                CriarOpcao(
+                    "IMAGEM",
+                    "Exibir uma imagem personalizada.");
+
+            tabela.Controls.Add(
+                imagePanel,
+                0,
+                1);
+
+            rbImage =
+                new RadioButton
+                {
+                    Text = "IMAGEM",
 
                     ForeColor =
                         Color.White,
@@ -931,23 +799,336 @@ namespace RD.ScreenGuard
                     Font =
                         new Font(
                             "Segoe UI",
-                            9F,
+                            9,
                             FontStyle.Bold),
 
                     AutoSize = true,
 
-                    Checked =
-                        selected
+                    Location =
+                        new Point(
+                            8,
+                            5)
                 };
 
-            return radio;
+            imagePanel.Controls.Add(
+                rbImage);
+
+            // =====================================================
+            // MENSAGEM
+            // =====================================================
+
+            Panel textPanel =
+                CriarOpcao(
+                    "MENSAGEM",
+                    "Exibir um aviso personalizado.");
+
+            tabela.Controls.Add(
+                textPanel,
+                0,
+                2);
+
+            rbText =
+                new RadioButton
+                {
+                    Text = "MENSAGEM",
+
+                    ForeColor =
+                        Color.White,
+
+                    Font =
+                        new Font(
+                            "Segoe UI",
+                            9,
+                            FontStyle.Bold),
+
+                    AutoSize = true,
+
+                    Location =
+                        new Point(
+                            8,
+                            5)
+                };
+
+            textPanel.Controls.Add(
+                rbText);
+
+            // =====================================================
+            // CONFIGURAÇÃO
+            // =====================================================
+
+            Panel configuracao =
+                new Panel
+                {
+                    Dock = DockStyle.Fill,
+
+                    BackColor =
+                        Color.FromArgb(
+                            9,
+                            16,
+                            25),
+
+                    Padding =
+                        new Padding(
+                            10)
+                };
+
+            tabela.Controls.Add(
+                configuracao,
+                1,
+                0);
+
+            tabela.SetRowSpan(
+                configuracao,
+                4);
+
+            Label configTitle =
+                new Label
+                {
+                    Text =
+                        "CONFIGURAÇÃO",
+
+                    ForeColor =
+                        Color.FromArgb(
+                            100,
+                            185,
+                            240),
+
+                    Font =
+                        new Font(
+                            "Segoe UI",
+                            8.5F,
+                            FontStyle.Bold),
+
+                    Dock = DockStyle.Top,
+
+                    Height = 25
+                };
+
+            configuracao.Controls.Add(
+                configTitle);
+
+            txtMessage =
+                new TextBox
+                {
+                    Multiline = true,
+
+                    ScrollBars =
+                        ScrollBars.Vertical,
+
+                    BackColor =
+                        Color.FromArgb(
+                            5,
+                            10,
+                            17),
+
+                    ForeColor =
+                        Color.White,
+
+                    BorderStyle =
+                        BorderStyle.FixedSingle,
+
+                    Font =
+                        new Font(
+                            "Segoe UI",
+                            9F),
+
+                    Dock = DockStyle.Top,
+
+                    Height = 75,
+
+                    Text =
+                        "MANUTENÇÃO EM ANDAMENTO\r\n" +
+                        "POR FAVOR AGUARDE..."
+                };
+
+            configuracao.Controls.Add(
+                txtMessage);
+
+            btnImage =
+                CriarBotao(
+                    "SELECIONAR IMAGEM",
+                    Blue);
+
+            btnImage.Dock =
+                DockStyle.Top;
+
+            btnImage.Height = 40;
+
+            btnImage.Margin =
+                new Padding(
+                    0,
+                    10,
+                    0,
+                    0);
+
+            btnImage.Click +=
+                (s, e) =>
+                    EscolherImagem();
+
+            configuracao.Controls.Add(
+                btnImage);
+
+            lblImage =
+                new Label
+                {
+                    Text =
+                        "Nenhuma imagem selecionada",
+
+                    ForeColor =
+                        Color.FromArgb(
+                            110,
+                            125,
+                            140),
+
+                    TextAlign =
+                        ContentAlignment.MiddleCenter,
+
+                    Dock = DockStyle.Top,
+
+                    Height = 40
+                };
+
+            configuracao.Controls.Add(
+                lblImage);
+        }
+
+        private Panel CriarOpcao(
+            string titulo,
+            string descricao)
+        {
+            Panel panel =
+                new Panel
+                {
+                    Dock = DockStyle.Fill,
+
+                    BackColor =
+                        Color.FromArgb(
+                            11,
+                            19,
+                            29)
+                };
+
+            Label desc =
+                new Label
+                {
+                    Text = descricao,
+
+                    ForeColor =
+                        Color.FromArgb(
+                            120,
+                            135,
+                            150),
+
+                    Font =
+                        new Font(
+                            "Segoe UI",
+                            7.5F),
+
+                    AutoSize = true,
+
+                    Location =
+                        new Point(
+                            28,
+                            25)
+                };
+
+            panel.Controls.Add(
+                desc);
+
+            return panel;
+        }
+
+        // =========================================================
+        // CONTROLE
+        // =========================================================
+
+        private void CriarControle(
+            Panel container)
+        {
+            TableLayoutPanel tabela =
+                new TableLayoutPanel
+                {
+                    Dock = DockStyle.Fill,
+
+                    ColumnCount = 2,
+
+                    RowCount = 1,
+
+                    Padding =
+                        new Padding(
+                            20,
+                            62,
+                            20,
+                            20)
+                };
+
+            tabela.ColumnStyles.Add(
+                new ColumnStyle(
+                    SizeType.Percent,
+                    50F));
+
+            tabela.ColumnStyles.Add(
+                new ColumnStyle(
+                    SizeType.Percent,
+                    50F));
+
+            container.Controls.Add(
+                tabela);
+
+            btnExecute =
+                CriarBotao(
+                    "▶   EXECUTAR AÇÃO",
+                    Blue);
+
+            btnExecute.Dock =
+                DockStyle.Fill;
+
+            btnExecute.Margin =
+                new Padding(
+                    0,
+                    0,
+                    8,
+                    0);
+
+            btnExecute.Click +=
+                async (s, e) =>
+                    await ExecutarAsync();
+
+            tabela.Controls.Add(
+                btnExecute,
+                0,
+                0);
+
+            btnRestore =
+                CriarBotao(
+                    "■   RESTAURAR TELA",
+                    Red);
+
+            btnRestore.Dock =
+                DockStyle.Fill;
+
+            btnRestore.Margin =
+                new Padding(
+                    8,
+                    0,
+                    0,
+                    0);
+
+            btnRestore.Click +=
+                async (s, e) =>
+                    await RestaurarAsync();
+
+            tabela.Controls.Add(
+                btnRestore,
+                1,
+                0);
         }
 
         // =========================================================
         // BOTÃO
         // =========================================================
 
-        private Button CreateModernButton(
+        private Button CriarBotao(
             string text,
             Color color)
         {
@@ -973,8 +1154,8 @@ namespace RD.ScreenGuard
                     Cursor =
                         Cursors.Hand,
 
-                    TextAlign =
-                        ContentAlignment.MiddleCenter
+                    UseVisualStyleBackColor =
+                        false
                 };
 
             button.FlatAppearance.BorderSize =
@@ -986,7 +1167,7 @@ namespace RD.ScreenGuard
                     button.BackColor =
                         ControlPaint.Light(
                             color,
-                            0.15f);
+                            0.12f);
                 };
 
             button.MouseLeave +=
@@ -1000,10 +1181,31 @@ namespace RD.ScreenGuard
         }
 
         // =========================================================
+        // DESTAQUE
+        // =========================================================
+
+        private void Destacar(
+            Panel panel)
+        {
+            panel.BackColor =
+                Color.FromArgb(
+                    14,
+                    37,
+                    57);
+        }
+
+        private void RemoverDestaque(
+            Panel panel)
+        {
+            panel.BackColor =
+                CardDark;
+        }
+
+        // =========================================================
         // IMAGEM
         // =========================================================
 
-        private void ChooseImage()
+        private void EscolherImagem()
         {
             using OpenFileDialog dialog =
                 new OpenFileDialog
@@ -1025,7 +1227,7 @@ namespace RD.ScreenGuard
                 dialog.FileName;
 
             lblImage.Text =
-                "Imagem selecionada:\r\n" +
+                "Imagem: " +
                 Path.GetFileName(
                     imageFile);
 
@@ -1033,10 +1235,10 @@ namespace RD.ScreenGuard
         }
 
         // =========================================================
-        // COMPUTADOR ALVO
+        // ALVO
         // =========================================================
 
-        private string? GetTarget()
+        private string? ObterAlvo()
         {
             if (pc1.Checked)
                 return deviceId;
@@ -1051,15 +1253,15 @@ namespace RD.ScreenGuard
         // EXECUTAR
         // =========================================================
 
-        private async Task ExecuteAsync()
+        private async Task ExecutarAsync()
         {
             string? target =
-                GetTarget();
+                ObterAlvo();
 
             if (target == null)
             {
                 MessageBox.Show(
-                    "Selecione um computador.",
+                    "Selecione COMPUTADOR 01 ou COMPUTADOR 02.",
                     "RD Screen Guard",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Information);
@@ -1070,6 +1272,7 @@ namespace RD.ScreenGuard
             string command;
 
             string? textValue = null;
+
             string? imageBase64 = null;
 
             if (rbBlack.Checked)
@@ -1122,7 +1325,7 @@ namespace RD.ScreenGuard
             {
                 if (target == deviceId)
                 {
-                    ApplyCommand(
+                    AplicarComando(
                         command,
                         textValue,
                         imageBase64);
@@ -1154,7 +1357,7 @@ namespace RD.ScreenGuard
                 if (!enviado)
                 {
                     MessageBox.Show(
-                        "Não foi possível enviar o comando ao computador selecionado.",
+                        "Não foi possível enviar o comando ao computador.",
                         "RD Screen Guard",
                         MessageBoxButtons.OK,
                         MessageBoxIcon.Warning);
@@ -1170,10 +1373,10 @@ namespace RD.ScreenGuard
         // RESTAURAR
         // =========================================================
 
-        private async Task RestoreAsync()
+        private async Task RestaurarAsync()
         {
             string? target =
-                GetTarget();
+                ObterAlvo();
 
             if (target == null)
             {
@@ -1186,7 +1389,7 @@ namespace RD.ScreenGuard
 
             if (target == deviceId)
             {
-                RestoreLocal();
+                RestaurarLocal();
                 return;
             }
 
@@ -1205,7 +1408,7 @@ namespace RD.ScreenGuard
         // COMUNICAÇÃO
         // =========================================================
 
-        private void StartRemoteLoop()
+        private void IniciarComunicacao()
         {
             if (string.IsNullOrWhiteSpace(
                 auth.AccessToken))
@@ -1228,21 +1431,21 @@ namespace RD.ScreenGuard
             timer.Tick +=
                 async (s, e) =>
                 {
-                    await UpdateDevicesAsync();
-                    await PollAsync();
+                    await AtualizarComputadoresAsync();
+                    await BuscarComandoAsync();
                 };
 
             timer.Start();
 
-            _ = UpdateDevicesAsync();
-            _ = PollAsync();
+            _ = AtualizarComputadoresAsync();
+            _ = BuscarComandoAsync();
         }
 
         // =========================================================
-        // ATUALIZAR COMPUTADORES
+        // COMPUTADORES ONLINE
         // =========================================================
 
-        private async Task UpdateDevicesAsync()
+        private async Task AtualizarComputadoresAsync()
         {
             if (string.IsNullOrWhiteSpace(
                 auth.AccessToken))
@@ -1330,7 +1533,7 @@ namespace RD.ScreenGuard
         // RECEBER COMANDO
         // =========================================================
 
-        private async Task PollAsync()
+        private async Task BuscarComandoAsync()
         {
             if (string.IsNullOrWhiteSpace(
                 auth.AccessToken))
@@ -1349,7 +1552,7 @@ namespace RD.ScreenGuard
 
             try
             {
-                ApplyCommand(
+                AplicarComando(
                     command.Tipo,
                     command.Texto,
                     command.ImagemBase64);
@@ -1365,10 +1568,10 @@ namespace RD.ScreenGuard
         }
 
         // =========================================================
-        // APLICAR COMANDO LOCAL
+        // APLICAR
         // =========================================================
 
-        private void ApplyCommand(
+        private void AplicarComando(
             string command,
             string? textValue,
             string? imageBase64)
@@ -1377,11 +1580,11 @@ namespace RD.ScreenGuard
                 "restore",
                 StringComparison.OrdinalIgnoreCase))
             {
-                RestoreLocal();
+                RestaurarLocal();
                 return;
             }
 
-            RestoreLocal();
+            RestaurarLocal();
 
             foreach (Screen screen
                 in Screen.AllScreens)
@@ -1447,7 +1650,7 @@ namespace RD.ScreenGuard
         // RESTAURAR LOCAL
         // =========================================================
 
-        private void RestoreLocal()
+        private void RestaurarLocal()
         {
             foreach (
                 OverlayForm overlay
